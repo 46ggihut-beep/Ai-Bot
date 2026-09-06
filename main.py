@@ -8,6 +8,10 @@ DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 MISTRAL_API_KEY = os.environ["MISTRAL_API_KEY"]
 
 ALLOWED_CHANNEL_IDS = []  # để trống nếu cho phép mọi kênh
+# Các kênh trong danh sách này: bot trả lời MỌI tin nhắn, không cần @bot hay !ai.
+# Lấy ID kênh: bật Developer Mode trong Discord (User Settings > Advanced) rồi
+# chuột phải/nhấn giữ vào kênh > Copy Channel ID.
+FREE_CHAT_CHANNEL_IDS = [1546038473880772630]  # thay bằng ID kênh thật, để trống [] nếu không dùng
 SYSTEM_PROMPT = "Bạn là một trợ lý AI thân thiện, trả lời ngắn gọn, dễ hiểu bằng tiếng Việt."
 
 # Model free trên Mistral La Plateforme (gói "Experiment", rate-limited, không cần thẻ).
@@ -119,8 +123,10 @@ async def on_message(message):
     if ALLOWED_CHANNEL_IDS and message.channel.id not in ALLOWED_CHANNEL_IDS:
         return
 
+    is_free_chat_channel = message.channel.id in FREE_CHAT_CHANNEL_IDS
     mentioned = bot.user in message.mentions
-    if not mentioned and not message.content.startswith("!ai "):
+
+    if not is_free_chat_channel and not mentioned and not message.content.startswith("!ai "):
         return
 
     user_text = message.content.replace(f"<@{bot.user.id}>", "").replace("!ai ", "").strip()
