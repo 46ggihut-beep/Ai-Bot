@@ -11,7 +11,7 @@ ALLOWED_CHANNEL_IDS = []  # để trống nếu cho phép mọi kênh
 # Các kênh trong danh sách này: bot trả lời MỌI tin nhắn, không cần @bot hay !ai.
 # Lấy ID kênh: bật Developer Mode trong Discord (User Settings > Advanced) rồi
 # chuột phải/nhấn giữ vào kênh > Copy Channel ID.
-FREE_CHAT_CHANNEL_IDS = [123456789012345678]  # thay bằng ID kênh thật, để trống [] nếu không dùng
+FREE_CHAT_CHANNEL_IDS = [1546038473880772630]  # thay bằng ID kênh thật, để trống [] nếu không dùng
 SYSTEM_PROMPT = (
     "Bạn là một người bạn thân đang nhắn tin, không phải trợ lý AI trang trọng. "
     "Nói chuyện tự nhiên, xưng hô kiểu bạn bè (tao/mày, t/m, hoặc mình/bạn tùy ngữ cảnh người nhắn dùng), "
