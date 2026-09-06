@@ -5,16 +5,16 @@ import discord
 from openai import AsyncOpenAI, APIStatusError, APIConnectionError
 
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
-CEREBRAS_API_KEY = os.environ["CEREBRAS_API_KEY"]
+MISTRAL_API_KEY = os.environ["MISTRAL_API_KEY"]
 
 ALLOWED_CHANNEL_IDS = []  # để trống nếu cho phép mọi kênh
 SYSTEM_PROMPT = "Bạn là một trợ lý AI thân thiện, trả lời ngắn gọn, dễ hiểu bằng tiếng Việt."
 
-# Model free trên Cerebras (1 triệu token/ngày, reset mỗi ngày).
-# Danh sách đầy đủ: https://inference-docs.cerebras.ai/models/overview
+# Model free trên Mistral La Plateforme (gói "Experiment", rate-limited, không cần thẻ).
+# Danh sách đầy đủ: https://docs.mistral.ai/getting-started/models/models_overview/
 MODEL_FALLBACK_CHAIN = [
-    "gpt-oss-120b",
-    "qwen-3.8-27b",
+    "mistral-small-latest",
+    "open-mistral-7b",
 ]
 MAX_HISTORY = 10
 
@@ -24,8 +24,8 @@ RETRIES_PER_MODEL = 2  # số lần thử lại cho MỖI model trước khi chu
 BASE_DELAY_SECONDS = 2  # 2s, 4s...
 
 ai_client = AsyncOpenAI(
-    api_key=CEREBRAS_API_KEY,
-    base_url="https://api.cerebras.ai/v1",
+    api_key=MISTRAL_API_KEY,
+    base_url="https://api.mistral.ai/v1",
 )
 
 intents = discord.Intents.default()
@@ -77,32 +77,32 @@ async def generate_reply(history):
 
                 if status_code in RETRYABLE_STATUS_CODES and attempt < RETRIES_PER_MODEL - 1:
                     wait = BASE_DELAY_SECONDS * (2 ** attempt)
-                    print(f"[Cerebras] {model_name} lỗi tạm thời ({status_code}), thử lại sau {wait}s "
+                    print(f"[Mistral] {model_name} lỗi tạm thời ({status_code}), thử lại sau {wait}s "
                           f"(lần {attempt + 1}/{RETRIES_PER_MODEL})...")
                     await asyncio.sleep(wait)
                     continue
 
                 # Hết lượt retry cho model này, hoặc lỗi không thể retry -> chuyển sang model kế tiếp
-                print(f"[Cerebras] {model_name} thất bại ({status_code}), chuyển sang model kế tiếp...")
+                print(f"[Mistral] {model_name} thất bại ({status_code}), chuyển sang model kế tiếp...")
                 break
 
             except APIConnectionError as e:
                 last_error = e
                 if attempt < RETRIES_PER_MODEL - 1:
                     wait = BASE_DELAY_SECONDS * (2 ** attempt)
-                    print(f"[Cerebras] {model_name} lỗi kết nối, thử lại sau {wait}s "
+                    print(f"[Mistral] {model_name} lỗi kết nối, thử lại sau {wait}s "
                           f"(lần {attempt + 1}/{RETRIES_PER_MODEL})...")
                     await asyncio.sleep(wait)
                     continue
-                print(f"[Cerebras] {model_name} lỗi kết nối liên tục, chuyển sang model kế tiếp...")
+                print(f"[Mistral] {model_name} lỗi kết nối liên tục, chuyển sang model kế tiếp...")
                 break
 
             except Exception as e:
                 last_error = e
-                print(f"[Cerebras] {model_name} lỗi không xác định: {e}, chuyển sang model kế tiếp...")
+                print(f"[Mistral] {model_name} lỗi không xác định: {e}, chuyển sang model kế tiếp...")
                 break
 
-    print(f"[Cerebras] Tất cả model đều thất bại. Lỗi cuối: {last_error}")
+    print(f"[Mistral] Tất cả model đều thất bại. Lỗi cuối: {last_error}")
     return "Xin lỗi, hiện tại AI đang quá tải hoặc gặp sự cố, bạn thử lại sau ít phút nhé 🙏"
 
 
