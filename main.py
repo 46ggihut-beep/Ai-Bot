@@ -1,4 +1,5 @@
 import os
+import base64
 import asyncio
 from aiohttp import web
 import discord
@@ -6,6 +7,9 @@ from openai import AsyncOpenAI, APIStatusError, APIConnectionError
 
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+MAX_IMAGES_PER_MESSAGE = 3  # giới hạn số ảnh xử lý mỗi tin nhắn, tránh tốn quá nhiều token
 
 ALLOWED_CHANNEL_IDS = []  # để trống nếu cho phép mọi kênh
 # Các kênh trong danh sách này: bot trả lời MỌI tin nhắn, không cần @bot hay !ai.
@@ -63,6 +67,29 @@ async def start_web_server():
     port = int(os.environ.get("PORT", 10000))  # Render tự cấp PORT
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
+
+
+async def attachments_to_image_blocks(attachments):
+    """Tải các ảnh đính kèm trong tin nhắn Discord về và chuyển thành block ảnh
+    cho Gemini (chuẩn OpenAI vision: image_url dạng data URI base64)."""
+    image_blocks = []
+    for attachment in attachments:
+        if len(image_blocks) >= MAX_IMAGES_PER_MESSAGE:
+            break
+        filename_lower = (attachment.filename or "").lower()
+        if not filename_lower.endswith(IMAGE_EXTENSIONS):
+            continue
+        try:
+            image_bytes = await attachment.read()
+            b64_data = base64.b64encode(image_bytes).decode("utf-8")
+            content_type = attachment.content_type or "image/png"
+            image_blocks.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{content_type};base64,{b64_data}"},
+            })
+        except Exception as e:
+            print(f"[Ảnh] Lỗi khi tải ảnh {attachment.filename}: {e}")
+    return image_blocks
 
 
 async def generate_reply(history):
@@ -155,12 +182,21 @@ async def on_message(message):
         return
 
     user_text = message.content.replace(f"<@{bot.user.id}>", "").replace("!ai ", "").strip()
-    if not user_text:
+
+    image_blocks = await attachments_to_image_blocks(message.attachments)
+    if not user_text and not image_blocks:
         return
 
     channel_id = message.channel.id
     history = chat_history.setdefault(channel_id, [])
-    history.append({"role": "user", "content": user_text})
+
+    if image_blocks:
+        # Tin nhắn có ảnh: nội dung là danh sách gồm text + các block ảnh (chuẩn vision)
+        content_blocks = image_blocks.copy()
+        content_blocks.append({"type": "text", "text": user_text or "Xem ảnh này giúp t."})
+        history.append({"role": "user", "content": content_blocks})
+    else:
+        history.append({"role": "user", "content": user_text})
     history[:] = history[-MAX_HISTORY:]
 
     async with message.channel.typing():
