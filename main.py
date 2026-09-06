@@ -13,8 +13,8 @@ SYSTEM_PROMPT = "Bạn là một trợ lý AI thân thiện, trả lời ngắn 
 # Model free trên Cerebras (1 triệu token/ngày, reset mỗi ngày).
 # Danh sách đầy đủ: https://inference-docs.cerebras.ai/models/overview
 MODEL_FALLBACK_CHAIN = [
-    "llama-3.3-70b",
-    "llama3.1-8b",
+    "gpt-oss-120b",
+    "qwen-3.8-27b",
 ]
 MAX_HISTORY = 10
 
